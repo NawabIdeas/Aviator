@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <style>
+        body { background: #111; color: #eee; font-family: 'Segoe UI', sans-serif; padding: 0; margin: 0; }
+        
+        /* Login View */
+        #loginSection {
+            height: 100vh; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+        }
+        .login-box {
+            background: #222; padding: 40px; border-radius: 10px; border: 1px solid #333; text-align: center;
+        }
+        input {
+            display: block; width: 250px; padding: 12px; margin: 10px 0;
+            background: #333; border: 1px solid #444; color: white; border-radius: 5px;
+        }
+        button {
+            padding: 10px 25px; background: #E91E63; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;
+        }
+        button:hover { background: #d81b60; }
+
+        /* Dashboard View */
+        #dashboardSection { display: none; padding: 20px; max-width: 800px; margin: 0 auto; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        h2 { color: #E91E63; margin: 0; }
+
+        table { width: 100%; border-collapse: collapse; background: #1e1e1e; box-shadow: 0 0 10px black; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #333; }
+        th { background: #252525; color: #aaa; font-size: 0.9rem; text-transform: uppercase; }
+        tr:hover { background: #2a2a2a; }
+        
+        .btn-delete {
+            background: #D32F2F; color: white; padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8rem; width: auto;
+        }
+        .timestamp { color: #888; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<div id="loginSection">
+    <div class="login-box">
+        <h2 style="color:white; margin-top:0;">Admin Access</h2>
+        <input type="email" id="adminEmail" placeholder="Email">
+        <input type="password" id="adminPass" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <p id="loginError" style="color: red; font-size: 0.9rem; margin-top: 10px;"></p>
+    </div>
+</div>
+
+<div id="dashboardSection">
+    <div class="header">
+        <h2>Submitted IDs</h2>
+        <button onclick="logout()" style="background: #444; width: auto;">Logout</button>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Aviator ID</th>
+                <th>Time Submitted</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            </tbody>
+    </table>
+    <p id="loadingText" style="text-align:center; color:#666; margin-top:20px;">Loading data...</p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.9.1/firebase-auth-compat.js"></script>
+
+<script>
+    // --- 1. CONFIGURATION (Replace with your actual Firebase keys) ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyCuy96uamZEYbmasKwl8m5V8KggOn5ugCM",
+        authDomain: "i-love-aviator.firebaseapp.com",
+        databaseURL: "https://i-love-aviator-default-rtdb.firebaseio.com",
+        projectId: "i-love-aviator",
+        storageBucket: "i-love-aviator.firebasestorage.app",
+        messagingSenderId: "118859578290",
+        appId: "1:118859578290:web:4db39ac8a7150596c9c2ab",
+        measurementId: "G-HTV9G5BKHD"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    
+    // AUTH STATE LISTENER 
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = 'block';
+            loadData(); 
+        } else {
+            document.getElementById('loginSection').style.display = 'flex';
+            document.getElementById('dashboardSection').style.display = 'none';
+        }
+    });
+
+    // --- 3. FUNCTIONS ---
+
+    function login() {
+        const email = document.getElementById('adminEmail').value;
+        const pass = document.getElementById('adminPass').value;
+        const errorMsg = document.getElementById('loginError');
+        errorMsg.innerText = ""; 
+
+        auth.signInWithEmailAndPassword(email, pass)
+            .catch((error) => {
+                errorMsg.innerText = "Error: Invalid Email or Password.";
+                console.error("Login Error:", error);
+            });
+    }
+
+    function logout() {
+        auth.signOut();
+    }
+
+    function loadData() {
+        // Real-time listener
+        db.collection("aviator_ids")
+          .orderBy("timestamp", "desc")
+          .onSnapshot((snapshot) => {
+              const tbody = document.getElementById('tableBody');
+              document.getElementById('loadingText').style.display = 'none';
+              tbody.innerHTML = ""; 
+
+              snapshot.forEach((doc) => {
+                  const data = doc.data();
+                  const time = data.timestamp ? data.timestamp.toDate().toLocaleString() : 'Processing...'; 
+                  
+                  const row = `
+                    <tr>
+                        <td style="font-weight:bold; color:white;">${data.user_id}</td>
+                        <td class="timestamp">${time}</td>
+                        <td>
+                            <button class="btn-delete" onclick="deleteId('${doc.id}')">Delete</button>
+                        </td>
+                    </tr>
+                  `;
+                  tbody.innerHTML += row;
+              });
+
+              if (snapshot.empty) {
+                  document.getElementById('loadingText').innerText = "No IDs submitted yet.";
+                  document.getElementById('loadingText').style.display = 'block';
+              }
+          }, (error) => {
+              console.error("Firestore Read Error:", error);
+              document.getElementById('loadingText').innerText = "Data load error. Check if admin is logged in and security rules are correct (allow read, update, delete: if request.auth != null;).";
+          });
+    }
+
+    function deleteId(docId) {
+        if(confirm("Permanently delete ID: " + docId + "?")) {
+            db.collection("aviator_ids").doc(docId).delete()
+            .catch(error => alert("Error removing document: " + error.message));
+        }
+    }
+</script>
+
+</body>
+</html>

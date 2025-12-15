@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I Love Aviator</title>
+    
+    <script src='//libtl.com/sdk.js' data-zone='10326268' data-sdk='show_10326268'></script>
+    <style>
+        :root {
+            --primary: #E91E63;
+            --bg-dark: #121212;
+            --panel-bg: #1e1e1e;
+            --glow: 0 0 15px rgba(233, 30, 99, 0.7);
+        }
+
+        /* Disable Text Selection/Copying */
+        body {
+            background-color: var(--bg-dark);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-y: auto; 
+            
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            text-align: center;
+            box-sizing: border-box;
+            min-height: 100vh; 
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 30px;
+            font-weight: 900;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, #FF9800, #ff0055);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 2px 4px 0px rgba(0,0,0,0.5);
+            letter-spacing: 2px;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border-radius: 50px;
+            border: 2px solid #333;
+            background: #222;
+            color: #fff;
+            font-size: 1.1rem;
+            text-align: center;
+            outline: none;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+            transition: 0.3s;
+        }
+        input:focus { border-color: var(--primary); box-shadow: var(--glow); }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border-radius: 50px;
+            border: none;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.5);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,0.5); }
+
+        .btn-submit { background: linear-gradient(to right, #C2185B, #E91E63); box-shadow: 0 5px 0 #880E4F; margin-bottom: 20px;}
+        .btn-next { background: linear-gradient(to right, #388E3C, #4CAF50); box-shadow: 0 5px 0 #1B5E20; margin-top: 20px; }
+        
+        .btn-ad { 
+            background: linear-gradient(to right, #FF9800, #FFC107); 
+            box-shadow: 0 5px 0 #F57C00; 
+            margin-top: 20px;
+            font-size: 1.1rem;
+        }
+        
+        .result-box {
+            background: black;
+            border: 2px solid #333;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 25px 0;
+            box-shadow: 0 0 30px rgba(0,0,0,0.6);
+        }
+        .multiplier {
+            font-size: 4rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            color: var(--primary);
+            text-shadow: var(--glow);
+        }
+        
+        .popup-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+        .popup {
+            background: #222;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #444;
+            text-align: center;
+            width: 80%;
+            max-width: 320px;
+            position: relative;
+            box-shadow: 0 0 20px black;
+        }
+        .close-btn {
+            position: absolute; top: 10px; right: 15px;
+            color: #aaa; font-size: 24px; cursor: pointer;
+        }
+        .close-btn:hover { color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>I Love Aviator</h1>
+
+    <input type="text" id="userId" placeholder="Enter your Aviator ID">
+    <button class="btn btn-submit" onclick="submitID()">Submit ID</button>
+
+    <div class="result-box">
+        <div class="multiplier" id="displayMult">3.21x</div>
+    </div>
+
+    <button class="btn btn-next" onclick="nextRound()">Next Round</button>
+    
+    <button class="btn btn-ad" onclick="showAd()">Get Now</button>
+    
+</div>
+
+<div class="popup-overlay" id="popupOverlay">
+    <div class="popup">
+        <span class="close-btn" onclick="closePopup()">×</span>
+        <h3 id="popupText" style="margin: 10px 0; font-weight: normal; line-height: 1.5;">Message</h3>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+<script>
+    // --- 1. CONFIGURATION (Replace with your actual Firebase keys) ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyCuy96uamZEYbmasKwl8m5V8KggOn5ugCM",
+        authDomain: "i-love-aviator.firebaseapp.com",
+        databaseURL: "https://i-love-aviator-default-rtdb.firebaseio.com",
+        projectId: "i-love-aviator",
+        storageBucket: "i-love-aviator.firebasestorage.app",
+        messagingSenderId: "118859578290",
+        appId: "1:118859578290:web:4db39ac8a7150596c9c2ab",
+        measurementId: "G-HTV9G5BKHD"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // --- ADS LOGIC (Manual Trigger) ---
+    function showAd() {
+        if (typeof show_10326268 === 'function') {
+            
+            show_10326268().then(() => {
+                showPopup('Ad Preview Complete. Thank you!');
+            }).catch(error => {
+                showPopup('Ad loading failed or interrupted. Try again in a moment.');
+                console.error("Ad Preview Error:", error);
+            });
+            
+        } else {
+            showPopup('Ad service is currently initializing. Please try clicking "Get Now" again shortly.');
+            console.error("Ad SDK function show_10326268 not available.");
+        }
+    }
+
+
+    // --- POPUP/SUBMISSION LOGIC ---
+
+    function showPopup(message) {
+        const overlay = document.getElementById('popupOverlay');
+        document.getElementById('popupText').innerText = message;
+        overlay.style.display = 'flex';
+        
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 5000);
+    }
+
+    function closePopup() {
+        document.getElementById('popupOverlay').style.display = 'none';
+    }
+
+    // ID SUBMISSION LOGIC (Fix: Direct set to bypass failing doc.get() connection check)
+    function submitID() {
+        const idInput = document.getElementById('userId');
+        const userId = idInput.value.trim();
+
+        if (!userId) {
+            showPopup("Please enter a valid ID.");
+            return;
+        }
+        
+        // This logic directly attempts to create/overwrite the document.
+        // It requires Firestore Rule: allow create: if true;
+        db.collection("aviator_ids").doc(userId).set({ 
+           user_id: userId,
+           timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }) // Using merge:true to handle potential overwrites smoothly
+        .then(() => {
+           showPopup("ID submitted successfully. Please wait for verification.");
+           idInput.value = "";
+        }).catch((error) => {
+           console.error("Firebase Write Error:", error);
+           showPopup("Database connection error. Please ensure Firebase configuration and internet connection are correct.");
+        });
+    }
+
+    function nextRound() {
+        showPopup("Aap pehle game mein deposit (paise jama) karien. Round is blocked.");
+    }
+
+</script>
+
+</body>
+</html>
